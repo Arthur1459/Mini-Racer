@@ -1,0 +1,2 @@
+To Export as app :
+pyinstaller -F --noconsole --add-data "rsc/*.*:rsc/" --add-data "rsc/folder/*.*:rsc/folder/" main.py
