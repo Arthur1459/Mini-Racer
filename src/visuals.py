@@ -1,11 +1,13 @@
 import time
 import pygame.image as pgi
 import pygame.transform as pgt
+from pygame import font
 from glob import glob
 
 import config as cf
 from utils import resource_path as path
 import vars as vr
+
 
 def img(filepath, resize=None, full_path=False, flip=(False, False)):
     img_raw = pgt.flip(pgi.load(filepath if full_path else path(f"rsc/visuals/{filepath}")), flip[0], flip[1])
@@ -41,6 +43,7 @@ class Animation:
 
 empty = img("empty.png")
 start_line = img("start_line.png")
+crown = img("crown.png", resize=(cf.racer_size[0] / 2, cf.racer_size[1] / 2))
 
 racer_visuals = {'straight': Animation('straight', 'racer/straight', 0.1, resize=cf.racer_size, flip=(False, False)),
                  'turn_low': Animation('turn_low', 'racer/turn_low', 0.1, resize=cf.racer_size, flip=(False, False)),

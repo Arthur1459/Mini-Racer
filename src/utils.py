@@ -1,10 +1,11 @@
 import os
 import sys
 import time
-
 import pygame as pg
+import random
 
 import vars as vr
+from logger import printWarning
 from vector import Vector, rad, deg, sin, cos, NullVector
 
 def evaluate_impact(func):
@@ -21,9 +22,16 @@ def resource_path(relative_path):
     #print(os.path.join(base_path, relative_path))
     return os.path.join(base_path, relative_path)
 
+pg.font.init()
+text_fonts = {size: pg.font.Font(resource_path("rsc/misc/pixel.ttf"), size) for size in range(4, 81, 4)}
+
 def Text(msg, coord, size, color):  # blit to the screen a text
     TextColor = pg.Color(color) # set the color of the text
-    font = pg.font.Font(resource_path("rsc/misc/pixel.ttf"), size)  # set the font
+    if size in text_fonts:
+        font = text_fonts[size]
+    else:
+        printWarning(f"Size {size} not supported. (must be a multiple of 4 between 4 to 80)")
+        font = text_fonts[24]
     return vr.game_window.blit(font.render(msg, True, TextColor), coord)  # return and blit the text on the screen
 
 def getInputs():
@@ -93,3 +101,23 @@ def getNewId():
     vr.id += 1
     return vr.id
 
+def generate_name():
+    consonants = [
+        "b", "c", "d", "f", "g", "h", "j", "k", "l",
+        "m", "n", "p", "r", "s", "t", "v", "x", "z"
+    ]
+    vowels = ["a", "e", "i", "o", "u", "y"]
+
+    patterns = [
+        "VCV", "CVC", "CVV", "CVCV", "CVVC", "VCVC"
+    ]
+
+    pattern = random.choice(patterns)
+    name = ""
+    for ch in pattern:
+        if ch == "C":
+            name += random.choice(consonants)
+        elif ch == "V":
+            name += random.choice(vowels)
+
+    return name.capitalize()

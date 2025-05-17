@@ -29,7 +29,7 @@ def init():
     vr.clock = pg.time.Clock()
 
     vr.world = World(Size(*cf.world_size), Vector(*vr.middle))
-    vr.race = Race(nb_bots=19)
+    vr.race = Race(nb_bots=11)
     return
 
 def main():

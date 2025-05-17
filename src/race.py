@@ -7,6 +7,7 @@ from vector import *
 from terrain import *
 from racer import Racer, BotRacer
 import vars as vr
+import visuals as vs
 
 import pygame as pg
 from math import cos, sin
@@ -28,6 +29,9 @@ class Race:
         self.reset()
 
         self.ranking = {}
+
+        self.rank_box = pg.Surface((300, 50), pg.SRCALPHA)
+        self.rank_box.fill((100, 100, 100, 128))
 
     def update(self):
         self.track.update()
@@ -98,13 +102,22 @@ class Race:
         u.Text(f"CHECK {'detected' if self.racers_info[self.player]['checkpoint'] else 'undetected'}", (40, 60), 32, 'green' if self.racers_info[self.player]['checkpoint'] else 'red')
         u.Text(f"CURRENT {(vr.t - self.racers_info[self.player]['time']):.2f} s", (vr.gwin_width - 300, 10), 24, 'green' if self.racers_info[self.player]['best_time'] is None or (vr.t - self.racers_info[self.player]['time']) < self.racers_info[self.player]['best_time'] else 'red')
         if self.racers_info[self.player]['best_time'] is not None: u.Text(f"BEST {self.racers_info[self.player]['best_time']:.2f} s", (vr.gwin_width - 300, 40), 24, 'white')
-        if self.racers_info[self.player]['last_time'] is not None: u.Text(f"LAST {self.racers_info[self.player]['last_time']:.2f} s", (vr.gwin_width - 300, 70), 18, 'white')
+        if self.racers_info[self.player]['last_time'] is not None: u.Text(f"LAST {self.racers_info[self.player]['last_time']:.2f} s", (vr.gwin_width - 300, 70), 16, 'white')
+
+        for racer in self.racers:
+            vr.game_window.blit(self.rank_box, (50, 200 + 60 * self.ranking[racer]))
+            u.Text(f"{self.ranking[racer]}: {racer.name}", (50 + 10, 200 + 60 * self.ranking[racer] - 1) , 40, 'white' if racer != self.player else 'red')
+            if self.ranking[racer] == 1:
+                vr.game_window.blit(vs.crown, (vr.world.ingame_position(racer.world_position) + Vector(0, -1.5 * cf.racer_size[1]))())
 
     def reset(self):
-        self.player = Racer(Vector(*cf.world_size) / 2, cf.racer_size, angle=-90)
+        direction = self.track.tiles[0].direction
+        width = self.track.tiles[0].area.size.width()
+        angle = self.track.tiles[0].area.angle
         self.bots = [
-            BotRacer(Vector(*cf.world_size) / 2 + Vector(t.rndInt(-100, 100), t.rndInt(-100, 100)), cf.racer_size,
-                     angle=-90) for _ in range(self.nb_bots)]
+            BotRacer(Vector(*cf.world_size)/2 - ((i + 2) * 1.05 * cf.racer_size[1] * direction) + (1 if i % 2 == 0 else -1) * Vector(define_by_angle=True, angle=angle + rad(90), norm=width/4), cf.racer_size,
+                     angle=-90, skills=(1.4 - (1.4 - 0.6) * (i + 0.5)/self.nb_bots)) for i in range(self.nb_bots)]
+        self.player = Racer(Vector(*cf.world_size)/2 - ((self.nb_bots + 2) * 1.05 * cf.racer_size[1] * direction) + (1 if self.nb_bots % 2 == 0 else -1) * Vector(define_by_angle=True, angle=angle + rad(90), norm=width/4), cf.racer_size, angle=-90)
         self.racers = [self.player] + self.bots
         self.racers_info = {racer: {'lap': 0, 'checkpoint': True, 'time': vr.t, 'last_time': None, 'best_time': None,
                                     'track_position': 0} for racer in self.racers}
