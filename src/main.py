@@ -29,7 +29,7 @@ def init():
     vr.clock = pg.time.Clock()
 
     vr.world = World(Size(*cf.world_size), Vector(*vr.middle))
-    vr.race = Race(nb_bots=11)
+    vr.race = Race(nb_bots=19)
     return
 
 def main():
@@ -49,11 +49,13 @@ def main():
         if frames_fps > 1000:
             frames_fps, t_fps = 0, time.time()
 
+        vr.inputs['CLICK'] = False
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 vr.running = False
             elif event.type == pg.MOUSEBUTTONDOWN:
                 print("Cursor : ", pg.mouse.get_pos(), f"(from center {Vector(*pg.mouse.get_pos()) - vr.world.ingame_middle()/2})")
+                vr.inputs['CLICK'] = True
 
         # Main Loop #
         pre_update()
@@ -66,7 +68,7 @@ def main():
     return
 
 def update():
-    vr.cursor = pg.mouse.get_pos()
+    vr.cursor_world = vr.world.world_position(cf.scale * Vector(*pg.mouse.get_pos()))
 
     vr.race.update()
 

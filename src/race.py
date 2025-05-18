@@ -17,6 +17,7 @@ class Race:
         self.started = False
 
         self.track = Road(Vector(*cf.world_size) / 2, width=350)
+        self.start_angle = 0
         self.terrain = []
 
         self.load_circuit()
@@ -55,6 +56,8 @@ class Race:
             self.display_ranking()
 
         else:
+            vr.world.update(NullVector())
+
             for bot in self.bots:
                 bot.draw()
 
@@ -116,8 +119,8 @@ class Race:
         angle = self.track.tiles[0].area.angle
         self.bots = [
             BotRacer(Vector(*cf.world_size)/2 - ((i + 2) * 1.05 * cf.racer_size[1] * direction) + (1 if i % 2 == 0 else -1) * Vector(define_by_angle=True, angle=angle + rad(90), norm=width/4), cf.racer_size,
-                     angle=-90, skills=(1.4 - (1.4 - 0.6) * (i + 0.5)/self.nb_bots)) for i in range(self.nb_bots)]
-        self.player = Racer(Vector(*cf.world_size)/2 - ((self.nb_bots + 2) * 1.05 * cf.racer_size[1] * direction) + (1 if self.nb_bots % 2 == 0 else -1) * Vector(define_by_angle=True, angle=angle + rad(90), norm=width/4), cf.racer_size, angle=-90)
+                     angle=self.start_angle, skills=(1.4 - (1.4 - 0.6) * (i + 0.5)/self.nb_bots)) for i in range(self.nb_bots)]
+        self.player = Racer(Vector(*cf.world_size)/2 - ((self.nb_bots + 2) * 1.05 * cf.racer_size[1] * direction) + (1 if self.nb_bots % 2 == 0 else -1) * Vector(define_by_angle=True, angle=angle + rad(90), norm=width/4), cf.racer_size, angle=self.start_angle)
         self.racers = [self.player] + self.bots
         self.racers_info = {racer: {'lap': 0, 'checkpoint': True, 'time': vr.t, 'last_time': None, 'best_time': None,
                                     'track_position': 0} for racer in self.racers}
@@ -125,29 +128,83 @@ class Race:
         self.ranking = {}
 
     def load_circuit(self):
-        self.track.addStraight(600, angle=-90)
-        self.track.addTurn(45, 5, 100)
-        self.track.addStraight(200)
-        self.track.addTurn(135, 5, 40)
-        self.track.addStraight(300)
-        self.track.addTurn(-90, 5, 50)
-        self.track.addStraight(600)
-        self.track.addStraight(600)
-        self.track.addTurn(135, 6, 75)
-        self.track.addStraight(300)
-        self.track.addTurn(-45, 5, 100)
-        self.track.addTurn(135, 5, 75)
-        self.track.addTurn(-45, 5, 100)
-        self.track.addStraight(913)
-        self.track.addTurn(90, 5, 50)
-        self.track.addTurn(90, 5, 50)
-        self.track.addTurn(-90, 5, 50)
-        self.track.addStraight(100)
+        suzuka(self)
 
-        self.terrain.append(Block(Vector(*cf.world_size) / 2 + Vector(900, 500),
-                                [Vector(-550, -950), Vector(-450, -800), Vector(-280, -400),
-                                 Vector(90, -150), Vector(660, -140), Vector(1000, -180),
-                                 Vector(1020, -100), Vector(640, 200), Vector(480, 420),
-                                 Vector(480, 750), Vector(110, 620), Vector(-360, 560),
-                                 Vector(-1020, 600), Vector(-1180, 520), Vector(-890, 410),
-                                 Vector(-660, 170), Vector(-560, -180), Vector(-650, -700), ]))
+
+def suzuka(race):
+    race.start_angle = 45
+
+    race.track.addStraight(3000, angle=race.start_angle)
+    #race.track.addStraight(2500)
+    race.track.addTurn(45, 5, 100)
+    race.track.addStraight(250)
+    race.track.addTurn(135, 5, 40)
+    race.track.addStraight(500)
+    race.track.addTurn(-60, 6, 100)
+    race.track.addTurn(90, 6, 100)
+    race.track.addTurn(-90, 6, 100)
+    race.track.addTurn(110, 5, 100)
+    race.track.addStraight(300)
+    race.track.addTurn(-90, 5, 100)
+    race.track.addTurn(-75, 3, 150)
+    race.track.addStraight(200)
+    race.track.addTurn(40, 8, 40)
+    race.track.addStraight(500)
+    race.track.addTurn(90, 8, 40)
+    race.track.addStraight(2000)
+    race.track.addTurn(40, 6, 40)
+    race.track.addStraight(1200)
+    race.track.addTurn(-170, 10, 100)
+    race.track.addStraight(1000)
+    race.track.addTurn(80, 5, 200)
+    race.track.addStraight(1000)
+    race.track.addTurn(45, 5, 100)
+    race.track.addStraight(1000)
+    race.track.addTurn(-75, 5, 75)
+    race.track.addStraight(300)
+    race.track.addTurn(-140, 5, 90)
+    race.track.addStraight(1500)
+    race.track.addTurn(-10, 5, 50)
+    race.track.addStraight(4100)
+    race.track.addTurn(-45, 5, 50)
+    race.track.addStraight(500)
+    race.track.addTurn(-14, 2, 50)
+    race.track.addStraight(1200)
+    race.track.addTurn(10, 5, 50)
+    race.track.addStraight(150)
+    race.track.addTurn(90, 5, 50)
+    race.track.addStraight(100)
+    race.track.addTurn(-90, 5, 50)
+    race.track.addStraight(130)
+    race.track.addTurn(84, 5, 150)
+    race.track.addStraight(250)
+
+def track_test(race):
+    race.start_angle = -90
+
+    race.track.addStraight(600, angle=-90)
+    race.track.addTurn(45, 5, 100)
+    race.track.addStraight(200)
+    race.track.addTurn(135, 5, 40)
+    race.track.addStraight(300)
+    race.track.addTurn(-90, 5, 50)
+    race.track.addStraight(600)
+    race.track.addStraight(600)
+    race.track.addTurn(135, 6, 75)
+    race.track.addStraight(300)
+    race.track.addTurn(-45, 5, 100)
+    race.track.addTurn(135, 5, 75)
+    race.track.addTurn(-45, 5, 100)
+    race.track.addStraight(913)
+    race.track.addTurn(90, 5, 50)
+    race.track.addTurn(90, 5, 50)
+    race.track.addTurn(-90, 5, 50)
+    race.track.addStraight(100)
+
+    race.terrain.append(Block(Vector(*cf.world_size) / 2 + Vector(900, 500),
+                              [Vector(-550, -950), Vector(-450, -800), Vector(-280, -400),
+                               Vector(90, -150), Vector(660, -140), Vector(1000, -180),
+                               Vector(1020, -100), Vector(640, 200), Vector(480, 420),
+                               Vector(480, 750), Vector(110, 620), Vector(-360, 560),
+                               Vector(-1020, 600), Vector(-1180, 520), Vector(-890, 410),
+                               Vector(-660, 170), Vector(-560, -180), Vector(-650, -700), ]))

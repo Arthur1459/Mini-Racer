@@ -17,7 +17,11 @@ class World:
     def ingame_middle(self) -> Vector: return self.game_size.size / 2
 
     def update(self, racer_speed: Vector):
+
         self.game_center = self.game_center + racer_speed * cf.dt
+
+        if vr.inputs['CLICK']:
+            self.game_center = vr.cursor_world
 
         self.game_center.x = t.bound(self.game_center.x, 0, self.world_size.x)
         self.game_center.y = t.bound(self.game_center.y, 0, self.world_size.y)

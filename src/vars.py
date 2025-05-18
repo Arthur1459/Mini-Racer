@@ -16,7 +16,7 @@ inputs = {}
 fps = cf.fps
 t = 0
 
-cursor = (0, 0)
+cursor_world = (0, 0)
 info_txt = ""
 id = 0
 

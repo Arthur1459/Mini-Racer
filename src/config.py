@@ -4,8 +4,10 @@ game_name = "Mini Racer"
 version = 1.0
 
 window_default_size = (1280, 720)
+game_scale = 2
 fov = 1.3
-game_resolution = (fov * 2560, fov * 1440)
+game_resolution = (fov * game_scale * window_default_size[0], fov * game_scale * window_default_size[1])
+scale = fov * game_scale
 fullscreen = True
 fps, dt = 60, 1/60
 fps_threshold = 0.5

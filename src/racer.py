@@ -30,10 +30,10 @@ class Racer(Sprite):
 
     def update(self):
 
-        max_speed = 1000.
+        max_speed = 1200.
         grass_speed = 600.
         wall_speed = 500.
-        slide_factor = 1
+        slide_factor = 1  
 
         if vr.inputs['UP']:
             self.speed = min(max_speed, self.speed + 15)
