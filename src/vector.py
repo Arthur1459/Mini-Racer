@@ -17,6 +17,7 @@ class Size:
         self.x, self.y = self.size()
     def length(self): return self.x
     def width(self): return self.y
+    def radius(self): return self.size.norm/2
 
 class Vector:
     def __init__(self, x=0, y=0, define_by_angle=False, angle=None, norm=None):

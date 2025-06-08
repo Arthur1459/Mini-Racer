@@ -5,6 +5,7 @@ import pygame as pg
 import random
 
 import vars as vr
+import config as cf
 from logger import printWarning
 from vector import Vector, rad, deg, sin, cos, NullVector
 
@@ -23,8 +24,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 pg.font.init()
-text_fonts = {size: pg.font.Font(resource_path("rsc/misc/pixel.ttf"), size) for size in range(4, 81, 4)}
-
+text_fonts = {size: pg.font.Font(resource_path("rsc/misc/pixel.ttf"), size) for size in range(4, 144 + 1, 4)}
 def Text(msg, coord, size, color):  # blit to the screen a text
     TextColor = pg.Color(color) # set the color of the text
     if size in text_fonts:
@@ -32,7 +32,7 @@ def Text(msg, coord, size, color):  # blit to the screen a text
     else:
         printWarning(f"Size {size} not supported. (must be a multiple of 4 between 4 to 80)")
         font = text_fonts[24]
-    return vr.game_window.blit(font.render(msg, True, TextColor), coord)  # return and blit the text on the screen
+    return vr.hud_window.blit(font.render(msg, True, TextColor), coord)  # return and blit the text on the screen
 
 def getInputs():
     keys = pg.key.get_pressed()
@@ -44,6 +44,31 @@ def getInputs():
     vr.inputs["LEFT"] = True if (keys[pg.K_LEFT] or keys[pg.K_q]) else False
 
     vr.inputs["R"] = True if (keys[pg.K_r] or keys[pg.K_z]) else False
+    vr.inputs["Y"] = True if (keys[pg.K_y]) else False
+
+    if cf.joystick:
+        getJoystickInputs()
+
+def waitkey(dt=0.3, reset=True):
+    if vr.t - vr.wait_key > dt:
+        if reset: vr.wait_key = vr.t
+        return True
+    else:
+        return False
+
+def getJoystickInputs(threshold=0.3):
+    if vr.joystick is not None:
+        horiz_left = vr.joystick.get_axis(0)
+
+        LT = vr.joystick.get_button(6)
+        RT = vr.joystick.get_button(7)
+
+        if (abs(horiz_left) > threshold):
+            vr.inputs["RIGHT"] = True if horiz_left > 0 else vr.inputs["RIGHT"]
+            vr.inputs["LEFT"] = True if horiz_left < 0 else vr.inputs["LEFT"]
+
+        vr.inputs["UP"] = True if RT else vr.inputs["UP"]
+        vr.inputs["DOWN"] = True if LT else vr.inputs["DOWN"]
 
 def angle_diff(angle_1, angle_2):
     return (angle_1 - angle_2 + 3.14) % (2 * 3.14) - 3.14

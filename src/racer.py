@@ -26,8 +26,9 @@ class Racer(Sprite):
                          vr.world.game_center + Vector(-self.size.width()*0.4, self.size.length()*0.3),
                          vr.world.game_center + Vector(self.size.width()*0.4, self.size.length()*0.3)]
         self.wall_detection = [False for _ in range(len(self.detector))]
+        self.wall_detection_owner = [None for _ in range(len(self.detector))]
         self.ground_type = 'road'
-
+    
     def update(self):
 
         max_speed = 1200.
@@ -35,8 +36,23 @@ class Racer(Sprite):
         wall_speed = 500.
         slide_factor = 1  
 
+        aspiration = 1.
+        bot_aspi, bot_dist = None, None
+        direction = Vector(define_by_angle=True, angle=self.angle, norm=1)
+        for bot in vr.race.bots:
+            dist = (bot.world_position - self.world_position).norm
+            align = direction.dot((bot.world_position - self.world_position).normalised())
+            if align > 0 and dist < 10 * self.size.length():
+                if bot_dist is None or bot_dist > dist:
+                    bot_aspi = bot
+                    bot_dist = dist
+                    aspiration = 1 + min((self.size.length() / (1 + dist)) * align * 0.5, 1.)
+
+        aspiration = max(1, aspiration * self.speed / max_speed)
+        max_speed = max_speed * aspiration
+
         if vr.inputs['UP']:
-            self.speed = min(max_speed, self.speed + 15)
+            self.speed = (self.speed + 15) if (self.speed + 15) < max_speed else self.speed + 10
         if vr.inputs['DOWN']:
             self.speed = 0.95 * self.speed
         if vr.inputs['RIGHT']:
@@ -67,11 +83,11 @@ class Racer(Sprite):
         self.angle = (self.angle + self.angle_speed * cf.dt) % 6.29
 
         if self.wall_detection[0]:
-            self.angle += 10 * cf.dt
-            self.speed = min(wall_speed, self.speed)
+            self.angle += (10 * cf.dt) if (self.wall_detection_owner[0] is None) else (2 * cf.dt)
+            self.speed = min(wall_speed, self.speed) if (self.wall_detection_owner[0] is None) else (self.speed + self.wall_detection_owner[0].speed)/2
         elif self.wall_detection[1]:
-            self.angle += -10 * cf.dt
-            self.speed = min(wall_speed, self.speed)
+            self.angle += (-10 * cf.dt) if (self.wall_detection_owner[0] is None) else (-2 * cf.dt)
+            self.speed = min(wall_speed, self.speed) if (self.wall_detection_owner[0] is None) else (self.speed + self.wall_detection_owner[0].speed)/2
 
         vr.world.update(Vector(define_by_angle=True, angle=self.angle, norm=1) * self.speed + sliding_vector)
         self.world_position = vr.world.game_center
@@ -83,6 +99,11 @@ class Racer(Sprite):
 
         self.update_visual()
         self.draw()
+        if bot_aspi is not None and aspiration > 1.15:
+            start = self.world_position + direction * self.size.length() * (0.45 - t.random()) + slide_direction * (1 - 2 * t.random()) * self.size.width() * 0.4
+            pg.draw.line(vr.game_window, 'grey', vr.world.ingame_position(start),
+                                                       vr.world.ingame_position(start - (aspiration - 1.15) * (direction * self.size.length())), width=2)
+
 
     def update_visual(self):
         if abs(self.angle_speed) >= 1:
@@ -121,7 +142,13 @@ class BotRacer(Sprite):
         self.road_position = 0
         self.target_randomness = NullVector()
 
-    def update(self):
+        self.detector = [vr.world.game_center + Vector(-self.size.width() * 0.4, -self.size.length() * 0.3),
+                         vr.world.game_center + Vector(self.size.width() * 0.4, -self.size.length() * 0.3),
+                         vr.world.game_center + Vector(-self.size.width() * 0.4, self.size.length() * 0.3),
+                         vr.world.game_center + Vector(self.size.width() * 0.4, self.size.length() * 0.3)]
+        self.wall_detection = [False for _ in range(len(self.detector))]
+
+    def update(self, draw=True):
 
         next_tile = vr.race.track.next_tile(self.road_position)
         if t.distance(self.world_position(), (next_tile.world_position + self.target_randomness)()) < next_tile.area.size.width()/2:
@@ -150,10 +177,35 @@ class BotRacer(Sprite):
         slide_direction = Vector(define_by_angle=True, angle=self.angle + rad(90), norm=1)
         sliding_vector = slide_direction * (0 if self.speed < 100 else -1 * self.angle_speed * min(200, 10000 * (self.angle_speed ** 2) * min(t.inv(self.speed), 0.001)))
 
+        if self.wall_detection[2]:
+            self.angle_speed = min(0.5, self.angle_speed)
+        elif self.wall_detection[3]:
+            self.angle_speed = max(-0.5, self.angle_speed)
+
+        self.angle = (self.angle + self.angle_speed * cf.dt) % 6.29
+
+        if self.wall_detection[0]:
+            self.angle += 10 * cf.dt
+            self.speed = self.speed
+        elif self.wall_detection[1]:
+            self.angle += -10 * cf.dt
+            self.speed = self.speed
+
         self.world_position = self.world_position + Vector(define_by_angle=True, angle=self.angle, norm=1) * self.speed * cf.dt + sliding_vector * cf.dt
 
-        self.update_visual()
-        self.draw()
+        self.detector = [
+            self.world_position + u.RotateVector(Vector(-self.size.width() * 0.4, -self.size.length() * 0.4),
+                                                  self.angle + 1.57),
+            self.world_position + u.RotateVector(Vector(self.size.width() * 0.4, -self.size.length() * 0.4),
+                                                  self.angle + 1.57),
+            self.world_position + u.RotateVector(Vector(-self.size.width() * 0.4, self.size.length() * 0.4),
+                                                  self.angle + 1.57),
+            self.world_position + u.RotateVector(Vector(self.size.width() * 0.4, self.size.length() * 0.4),
+                                                  self.angle + 1.57)]
+
+        if draw:
+            self.update_visual()
+            self.draw()
 
     def turn_angle(self, angle_target, turn_factor):
         diff = (angle_target - self.angle + 3.14) % (2 * 3.14) - 3.14

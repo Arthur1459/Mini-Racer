@@ -15,6 +15,8 @@ class World:
     def ingame_position(self, world_position) -> Vector:
         return world_position - self.game_center + self.ingame_middle()
     def ingame_middle(self) -> Vector: return self.game_size.size / 2
+    def hud_position(self, world_position: Vector) -> Vector:
+        return (world_position - self.game_center + self.game_size.size/2) / cf.scale
 
     def update(self, racer_speed: Vector):
 

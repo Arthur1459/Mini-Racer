@@ -15,10 +15,11 @@ from math import cos, sin
 class Race:
     def __init__(self, nb_bots=10):
         self.started = False
+        self.start_count, self.starting = 0, False
 
         self.track = Road(Vector(*cf.world_size) / 2, width=350)
         self.start_angle = 0
-        self.terrain = []
+        self.terrain = {'wall': [], 'moving': []}
 
         self.load_circuit()
 
@@ -31,15 +32,34 @@ class Race:
 
         self.ranking = {}
 
-        self.rank_box = pg.Surface((300, 50), pg.SRCALPHA)
-        self.rank_box.fill((100, 100, 100, 128))
+        self.text_box = pg.Surface((150, 20), pg.SRCALPHA)
+        self.text_box.fill((100, 100, 100, 128))
 
     def update(self):
         self.track.update()
 
-        for terrain in self.terrain:
+        # Update Terrain (~hitbox) and player collision detection
+        for terrain in (self.terrain['wall'] + self.terrain['moving']):
+            if t.distance(terrain.world_position, self.player.world_position) > vr.world.game_size.radius(): continue
             terrain.update()
-            self.player.wall_detection = terrain.touch(self.player.detector)
+            for bot in self.bots:
+                if terrain.owner != bot:
+                    detection = terrain.touch(bot.detector)
+                    bot.wall_detection = [bot.wall_detection[i] or detection[i] for i in range(len(bot.wall_detection))]
+
+            if terrain.owner != self.player:
+                detection = terrain.touch(self.player.detector)
+                for i in range(len(self.player.wall_detection)):
+                    self.player.wall_detection[i] = self.player.wall_detection[i] or detection[i]
+                    self.player.wall_detection_owner[i] = terrain.owner
+
+        # Reset moving hitbox with the player_one
+        self.terrain['moving'] = [InvisibleBlock(self.player.world_position,
+                                [u.RotateVector(Vector(-self.player.size.width() * 0.5, -self.player.size.length() * 0.5), self.player.angle + 1.57),
+                                             u.RotateVector(Vector(self.player.size.width() * 0.5, -self.player.size.length() * 0.5), self.player.angle + 1.57),
+                                             u.RotateVector(Vector(self.player.size.width() * 0.5, self.player.size.length() * 0.45), self.player.angle + 1.57),
+                                             u.RotateVector(Vector(-self.player.size.width() * 0.5, self.player.size.length() * 0.45), self.player.angle + 1.57)],
+                                             show=False, owner=self.player)]
 
         if self.started:
             if vr.inputs['R']:
@@ -48,12 +68,20 @@ class Race:
                 return
 
             for bot in self.bots:
-                bot.update()
+                bot.update(draw=(t.distance(bot.world_position, self.player.world_position) < vr.world.game_size.radius()))
+                bot.wall_detection = [False for _ in range(len(bot.wall_detection))]
+                self.terrain['moving'].append(InvisibleBlock(bot.world_position,
+                                [u.RotateVector(Vector(-bot.size.width() * 0.5, -bot.size.length() * 0.5), bot.angle + 1.57),
+                                             u.RotateVector(Vector(bot.size.width() * 0.5, -bot.size.length() * 0.5), bot.angle + 1.57),
+                                             u.RotateVector(Vector(bot.size.width() * 0.5, bot.size.length() * 0.45), bot.angle + 1.57),
+                                             u.RotateVector(Vector(-bot.size.width() * 0.5, bot.size.length() * 0.45), bot.angle + 1.57)], show=False, owner=bot))
 
             self.player.update()
+            self.player.wall_detection = [False for _ in range(len(self.player.wall_detection))]
+            self.player.wall_detection_owner = [None for _ in range(len(self.player.wall_detection))]
 
             self.update_ranking()
-            self.display_ranking()
+            self.display_hud()
 
         else:
             vr.world.update(NullVector())
@@ -64,9 +92,15 @@ class Race:
             self.player.draw()
 
             if vr.inputs['SPACE']:
+                self.starting = True
+                self.start_count = vr.t
+            elif self.starting and (vr.t - self.start_count) < 3:
+                u.Text(f"{3 - int(vr.t - self.start_count)}", (Vector(*vr.win_middle) - Vector(14, 28))(), 72, 'yellow')
+            elif self.starting:
+                self.starting = False
                 self.started = True
 
-        # pg.draw.circle(vr.game_window, 'green' if collide_test else 'blue', vr.middle, 10)
+        #pg.draw.circle(vr.game_window, 'green' if collide_test else 'blue', vr.middle, 10)
 
     def update_ranking(self):
         ranking_data = []
@@ -99,19 +133,19 @@ class Race:
         for rank, (_, racer) in enumerate(ranking_data, start=1):
             self.ranking[racer] = rank
 
-    def display_ranking(self):
-        u.Text(f"{self.ranking[self.player]} /{len(self.racers)}", (vr.gwin_width//2 - 90, 40), 48, 'white')
-        u.Text(f"LAP {self.racers_info[self.player]['lap']} /?", (40, 20), 48, 'white')
-        u.Text(f"CHECK {'detected' if self.racers_info[self.player]['checkpoint'] else 'undetected'}", (40, 60), 32, 'green' if self.racers_info[self.player]['checkpoint'] else 'red')
-        u.Text(f"CURRENT {(vr.t - self.racers_info[self.player]['time']):.2f} s", (vr.gwin_width - 300, 10), 24, 'green' if self.racers_info[self.player]['best_time'] is None or (vr.t - self.racers_info[self.player]['time']) < self.racers_info[self.player]['best_time'] else 'red')
-        if self.racers_info[self.player]['best_time'] is not None: u.Text(f"BEST {self.racers_info[self.player]['best_time']:.2f} s", (vr.gwin_width - 300, 40), 24, 'white')
-        if self.racers_info[self.player]['last_time'] is not None: u.Text(f"LAST {self.racers_info[self.player]['last_time']:.2f} s", (vr.gwin_width - 300, 70), 16, 'white')
+    def display_hud(self):
+        u.Text(f"{self.ranking[self.player]} /{len(self.racers)}", (vr.win_width//2 - 40, 20), 24, 'white')
+        u.Text(f"LAP {self.racers_info[self.player]['lap']} /?", (20, 10), 24, 'white')
+        u.Text(f"CHECK {'detected' if self.racers_info[self.player]['checkpoint'] else 'undetected'}", (20, 32), 12, 'green' if self.racers_info[self.player]['checkpoint'] else 'red')
+        u.Text(f"CURRENT {(vr.t - self.racers_info[self.player]['time']):.2f} s", (vr.win_width - 140, 5), 12, 'green' if self.racers_info[self.player]['best_time'] is None or (vr.t - self.racers_info[self.player]['time']) < self.racers_info[self.player]['best_time'] else 'red')
+        if self.racers_info[self.player]['best_time'] is not None: u.Text(f"BEST {self.racers_info[self.player]['best_time']:.2f} s", (vr.win_width - 140, 20), 12, 'white')
+        if self.racers_info[self.player]['last_time'] is not None: u.Text(f"LAST {self.racers_info[self.player]['last_time']:.2f} s", (vr.win_width - 140, 35), 12, 'white')
 
         for racer in self.racers:
-            vr.game_window.blit(self.rank_box, (50, 200 + 60 * self.ranking[racer]))
-            u.Text(f"{self.ranking[racer]}: {racer.name}", (50 + 10, 200 + 60 * self.ranking[racer] - 1) , 40, 'white' if racer != self.player else 'red')
+            vr.hud_window.blit(self.text_box, (20, 100 + 30 * self.ranking[racer]))
+            u.Text(f"{self.ranking[racer]}: {racer.name}", (20 + 5, 102 + 30 * self.ranking[racer] - 1) , 16, 'white' if racer != self.player else 'red')
             if self.ranking[racer] == 1:
-                vr.game_window.blit(vs.crown, (vr.world.ingame_position(racer.world_position) + Vector(0, -1.5 * cf.racer_size[1]))())
+                vr.game_window.blit(vs.crown, vr.world.ingame_position(racer.world_position) - Vector(0, cf.racer_size[1]))
 
     def reset(self):
         direction = self.track.tiles[0].direction
@@ -126,6 +160,8 @@ class Race:
                                     'track_position': 0} for racer in self.racers}
 
         self.ranking = {}
+        self.started = False
+        self.starting = False
 
     def load_circuit(self):
         suzuka(self)
@@ -201,7 +237,7 @@ def track_test(race):
     race.track.addTurn(-90, 5, 50)
     race.track.addStraight(100)
 
-    race.terrain.append(Block(Vector(*cf.world_size) / 2 + Vector(900, 500),
+    race.terrain['wall'].append(Block(Vector(*cf.world_size) / 2 + Vector(900, 500),
                               [Vector(-550, -950), Vector(-450, -800), Vector(-280, -400),
                                Vector(90, -150), Vector(660, -140), Vector(1000, -180),
                                Vector(1020, -100), Vector(640, 200), Vector(480, 420),

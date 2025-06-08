@@ -91,6 +91,7 @@ class Terrain:
         self.world_position = world_position
         self.area = shape
         self.color = (100, 100, 100)
+        self.owner = None
 
     def touch(self, point):
         if isinstance(point, Vector):
@@ -156,6 +157,7 @@ class Road:
 
     def update(self):
         for tile in self.tiles:
+            if t.distance(tile.world_position, vr.race.player.world_position) > vr.world.game_size.radius() * (0.6 if vr.camera_lock else 1.) + tile.area.size.length(): continue
             tile.update()
 
     def get_position(self, world_position: Vector, last_position) -> int:
@@ -200,6 +202,7 @@ class Road:
 
     def addStraight(self, length, angle=None):
         self.addRoad(length, rad(angle) if angle is not None else (self.tiles[-1].area.angle if len(self.tiles) > 0 else 0))
+
     def addTurn(self, angle, da=10, dl=100, base_angle=None):
         base_angle = base_angle if base_angle is not None else (self.tiles[-1].area.angle if len(self.tiles) > 0 else 0)
         kerbs = (False, False)
@@ -214,3 +217,13 @@ class Block(Terrain):
         super().__init__(world_position, Polygone(relative_points))
         self.color = (20, 20, 20)
 
+class InvisibleBlock(Terrain):
+    def __init__(self, world_position: Vector, relative_points: list[Vector], show=False, owner=None):
+        super().__init__(world_position, Polygone(relative_points))
+        self.color = (200, 200, 200)
+        self.show = show
+        self.owner = owner
+
+    def draw(self):
+        if self.show:
+            super().draw()
